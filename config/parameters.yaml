@@ -1,0 +1,3 @@
+image_topic: "/xtion_pro_cam/rgb/image_raw"
+input_clusters_topic: "/laser_overlap_trace/clusters"
+analysis_topic: "/laser_analysis/results4meters"

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
+<launch>
+	<master auto="start"/>
+
+	<node pkg="images_if_4_meters" type="ii4m.py" respawn="false" name="images_if_4_meters" output="screen">
+		<rosparam file="$(find images_if_4_meters)/config/parameters.yaml" command="load" />
+	</node>
+</launch>
