@@ -14,6 +14,7 @@ image_subscriber = None
 bridge = CvBridge()
 analysis_topic = ""
 subscribed = False
+last_callback_ = 0
 last_callback = 0
 image_buffer = []
 time_buffer = []
@@ -23,27 +24,38 @@ img_path = ""
 
 def image_callback(msg):
     global last_callback, image_buffer, time_buffer, someone_passing
+    global image_subscriber, last_callback_, subscribed
+    dt = datetime.now()
+    now_ = dt.minute*60000000 + dt.second*1000000 + dt.microsecond
+    if last_callback_ == 0:
+        last_callback_ = now_
     if someone_passing:
-        dt = datetime.now()
-        now = dt.minute*60000000 + dt.second*1000000 + dt.microsecond
-        if now - last_callback > 10000000:
+        last_callback_ = now_
+        now = msg.header.stamp.secs
+        if now - last_callback > 10:
             image_buffer = []
             time_buffer = []
-            #print 'Cleared image buffer due to late callback'
+            print 'Cleared image buffer due to late callback'
         last_callback = now
         try:
             cv2_img = bridge.imgmsg_to_cv2(msg, "bgr8")
             image_buffer.append(cv2_img)
-            time_buffer.append(last_callback)
-            #print 'Got a new image!' + str(now)
+            time_buffer.append(last_callback_)
+            print 'Got a new image!' + str(last_callback_)
         except CvBridgeError, e:
             print(e)
+    elif now_ - last_callback_ > 10000000:
+        print 'Disabling image subscriber'
+        image_subscriber.unregister()
+        image_buffer = []
+        time_buffer = []
+        subscribed = False
 
 def clusters_callback(msg):
     global image_topic, image_subscriber, subscribed, someone_passing
     if len(msg.x) > 0:
         if not subscribed:
-            #print 'Enabling image subscriber'
+            print 'Enabling image subscriber'
             image_subscriber = rospy.Subscriber(image_topic, Image, image_callback)
             subscribed = True
         someone_passing = True
@@ -53,15 +65,15 @@ def clusters_callback(msg):
 def analysis_callback(msg):
     global image_subscriber, image_buffer, time_buffer, img_path, subscribed
     #print 'Disabling image subscriber'
-    image_subscriber.unregister()
-    subscribed = False
+    #image_subscriber.unregister()
+    #subscribed = False
     image_buffer_ = list(image_buffer)
     image_buffer = []
     time_buffer_ = list(time_buffer)
     time_buffer = []
-    #print 'Cleared image buffer due to 4 meters event'
+    print 'Cleared image buffer due to 4 meters event'
     for i in range(len(image_buffer_)):
-        cv2.imwrite(img_path+"img_"+str(time_buffer_[i])+".jpeg", image_buffer_[i])
+        cv2.imwrite(img_path+"img_"+str(time_buffer_[i])+"_"+str(msg.header.seq)+".jpeg", image_buffer_[i])
 
 
 def main():
